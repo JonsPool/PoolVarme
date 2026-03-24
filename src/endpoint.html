@@ -9,33 +9,35 @@
   <body class="d-flex flex-column text-center">
     <main class="flex-grow-1 mt-3 mb-5">
       <table class="table table-bordered table-striped w-auto mx-auto">
-        <thead id="h" />
-        <tbody id="b" />
+        <thead id="h" />     <!-- Table head h -->      
+        <tbody id="b" />          
       </table>
     </main>
 
     <footer class="bg-primary fixed-bottom" id="f" />
-    <script>
-      const u = window.location.href.replace("spotelly", "data");
+    <script>        // Run Javascript within html
+      const u = window.location.href.replace("spotelly", "data");                        // Hämtar url för aktuell sida och byter ut "spotelly" mot "data" i den url'n.
       const c = (x, y) => (document.getElementById(x).innerHTML = y);
-      const i = ts => new Date(ts).toLocaleString("sv", { dateStyle: "short", timeStyle: "medium" });
+      const i = ts => new Date(ts).toLocaleString("sv", { dateStyle: "short", timeStyle: "medium" });  // Ger en ny ts=TimeStamp, datum o tid på svenskt tidsformat
 
       const m = d => {
-        c("h", `<tr><th colspan=4>Power Output Timetable for Switch ${d.s}<tr><th>Date<th>Hour<th>ct/kWh<th>On`);
+        //c("h", `<tr><th colspan=4>Pool Heating Timetable ${d.s}<tr><th>Date<th>Hour<th>SEK/kWh<th>On`);      // Rubrik. d.s är troligtvis en summa
+          //c("h", `<tr><th colspan=3>Heating Season is on?<th><div class=form-switch><input type=checkbox></div> <tr><th colspan=4>Pool Heating Timetable ${d.s}<tr><th>Date<th>Hour<th>SEK/kWh<th>On`);
+          c("h", `<tr><th colspan=3>Heating Season is on?<th><div class=form-switch><input class=form-check-input type=checkbox ${d.q ? "checked" : ""} onClick="t(${d.q}, this.checked)"></div> <tr><th colspan=4>Pool Heating Timetable ${d.s}<tr><th>Date<th>Hour<th>SEK/kWh<th>On`);
         let count = 0;
         let sum = 0;
         let body = "";
 
-        if (d.a) {
+        if (d.a) {                                    // d is JSON response from server. a is a starting time. p is price. o is on/off
           let h = d.a;
-          d.p = d.p.map(x => x ?? NaN);
+          d.p = d.p.map(x => x ?? NaN);                       // Nedanstående är för att sätta cellfärg beroende av timpris
           const max = Math.max(...d.p);
           const min = Math.min(...d.p);
 
           d.p.forEach((p, idx) => {
             const o = d.o[idx];
 
-            if (o) {
+            if (o) {                               // För beräkning av medelpris
               sum += p;
               count++;
             }
@@ -43,7 +45,7 @@
             const color = isNaN(max) ? "0, 0%, 100%" : `${(1 - (p - min) / (max - min)) * 120}, 100%, 50%`;
             const s = `style="color: hsl(${color});"`;
             body += `<tr><td ${s}>${i(h).slice(0, 10)}<td ${s}>${i(h).slice(11, 16)}<td ${s} class=text-end>${p.toFixed(2)}<td><div class=form-switch><input class=form-check-input type=checkbox ${o ? "checked" : ""} onClick="t(${h}, this.checked)"></div>`;
-            h += d.i;
+            h += d.i;                         // Increase h with timestep i in ms
           });
         }
 
@@ -52,11 +54,11 @@
         const w = new Date();
         const n = d.n ? d.n : new Date(w.getFullYear(), w.getMonth(), w.getDate() + (w.getHours() >= 15), 15).getTime() + d.r;
 
-        c("f", `${count} selected, Average: ${(count ? sum / count : 0).toFixed(2)} ct/kWh<br>Next Update: ${i(n)}`);
+        c("f", `${count} selected, Average: ${(count ? sum / count : 0).toFixed(2)} SEK/kWh<br>Next Update: ${i(n)}`);         // Här skrivs raderna under tabellen
       };
 
-      const t = (h, o) => {
-        fetch(u, h ? { method: "POST", body: JSON.stringify({ h, o }) } : { method: "GET" })
+      const t = (h, o) => {                       // if h exist, send (h, o) to server using POST, if not GET. 
+        fetch(u, h ? { method: "POST", body: JSON.stringify({ h, o }) } : { method: "GET" })     // if sucessful, pass response to m. If error, display the error using c
           .then(r => r.json())
           .then(d => m(d))
           .catch(e => c("b", `<tr><td colspan=4 class=p-5>${e}`));

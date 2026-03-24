@@ -8,23 +8,23 @@
 let epexBZN = "AT"; // EPEX Bidding Zone - see documentation for valid codes
 
 let hourMode = true; // true for hourly, false for quarter-hourly calculation
-let blockMode = true; // set calculation mode
+let blockMode = false; // set calculation mode. True for a consequative duration, false to allow for several, spread out durations
 
 let switchOnDuration = 4; // hours if hourMode is true, else quarter hours
 let timeWindowStartHour = 7; // minimum 0, maximum 23
 let timeWindowEndHour = 19; // minimum 0, maximum 23
-let priceLimit = Infinity; // in cent/kWh
+let priceLimit = Infinity; // in SEK/kWh
 let useFallback = true; // if true, use fallback when price retrieval fails
 
 // change this function to display prices according to the conditions of your contract
 function priceModifier(datetime, spotPrice) {
-  return spotPrice; // spotPrice is in cent/kWh
+  return spotPrice; // spotPrice is in SEK/kWh
 }
 
 let switchID = 0; // set the switch ID for multi-switch devices
 let invertSwitch = false; // if true, switch will be OFF for cheapest hours and ON for the rest
 
-let telegramActive = false; // set to true to activate the Telegram feature
+let telegramActive = false; // set to true to activate the Telegram feature. This feature provides messages when the price table was updated and whenever power was turned ON/OFF
 
 // the following settings have no effect when telegramActive is false
 let telegramToken = ""; // must be set when telegramActive is true
@@ -41,7 +41,7 @@ let on = [];
 let anch = 0;
 let rOff = Math.ceil(Math.random() * 300000);
 let timH = undefined;
-let html = atob("H4sIAAAAAAAACn1UbW/bNhD+KxzhFuRM0Xa7DIMtKtu6dt3QJgWSYRiGAaHJc8hGIgXybCdQ/N8HKnbTD8O+kHzuRTw99xzrb2w0+NADcdi1TV1WYjXqap0rdNCBsjrdNXUHqEnQHaidh30fExITA0JARffeolMWdt5ANQLhg0ev2yob3YJa0KZufbgjLsFGOcQ+L2czY4P8nC20fpdkAJyFvputY8SMSfc/nsnX8oeZ9RlnJudnh+x8kCZnkqBVGR9ayA4Amxo9ttBc9RGhbR/q2ROu19E+ENPqnBW11aaFe1KWysR22wWCcI+VgYCQaFN32odT8Bh1m+K+WpAOq9ekW1dntKlRr1s4BT2Bca3WMVlIYI8wY/I9WLKv9BYj6e7HvXzAgbbEW+WaGsfyvFXrpp6NeU09K1U09SZGhHS6aH1b9cl3Oj2Qjb8HW60jYuxoyd00dTbJ99i0gGSr9j7YuJdtNBp9DLLQLhP0rTbAaD4yRAUtnaZcGMVQAFeNjWbbQUB5C/i2hXL8+eE3y5BLHwKk99cfPygQXqFqAuzJLxqhODF+iKXTV5h8uGU076gYrEa4Kv1Z0uxiQirQdydLB9ZvO3rgolNONYNh1FFxU2Mq/BAT29zroL5rPsU9JHK5xX6L5NoXHRbGNzGRq71H48hkcDIfjplNKans7+M2ld3g7O5PV06X4YavCkFZzYVVcxEUpSu/YU5qPhSHUU5qERVzsldO9rLTPUPV4Pn5hb7g4qNGJzt9z6SUTvaci1Y92Xw42VYlbxPTW20cO9I67HQioJyMf8M/QisGL18yO1Uo8nTKhc8X+oJFfk7ngsxfCLKYz1/Q5eLV/Fu2qBhWLZ+xWLWcT+mTU5Cz+QvKhVY34wQoamIb05K43LLJoA98RW9WYaqOhFpSjM1k8MxwmVtvgM3FYs4P/+1bLMTi+2fnUYPjqECwzWRAifFdkSF7NYY1tfW7Y9gmpq7KY2+a2ofSt68cxoG5q57M5eFRo2Ed78lkgHM6IrB0SemBxPCm9eZOUWSTwRwEQeezPIZw2tQz63fNjTBT5aQ/8INhdE1FeHykp//+IqRjDX111lxE8iT8VekLqpOSBSonw+Pjs7LLHLzbtu1foBPjYsQfY0B3AmMYn7LFWa1GQ5FdZpyLxRkvuCiW8amTaWUY3VBxMxnygWRowSBYQX7aQdK3sCSTgeVzO8vLOf+aXHIU8Do1F3CP5I++zNWS3Ew9Q84PAk/DO2wAjWNbgedDB+iiXdJPl1fXVJQ3Zvn71eWFzOOA+s0DG9wSRVzCgR+WX8J/fXtND1yigzDqXn7OMTD+bOnKndLochGq5onv/yWbTkuVq+OTFEMbtVVYz44P1r+ZHu7zgQYAAA=="); // placeholder for compressed endpoint.html
+let html = atob("H4sIAAAAAAAACn1UbW/bNhD+KxzhFuRM0Xa7DIMtKntL121tWiAZhmEYEJo8h2woUhDPdgLF/32gYjf9MOwLybt7KJ6ee+7qr2wy+NABcdiGpi4rsRp1tc4VOmhBWd3fNXULqEnULaidh32XeiQmRYSIiu69Racs7LyBajSEjx69DlU2OoBa0KYOPt4R18NGOcQuL2czY6P8lC0Ev+tlBJzFrp2tU8KMve6+P5Ov5Xcz6zPOTM7PAdn6KE3OpIegMj4EyA4Amxo9BmiuuoQQwkM9e7LrdbIPxASds6K22gS4J2WpTArbNhKEe6wMRISeNnWrfTyBR9Rtn/bVgrRYvSbtujqjTY16HeAEejLGtVqn3kIP9mhm7H0HluwrvcVE2vtxLx9woC3xVrmmxjE9b9W6qWfjvaaelSyaepMSQn96aH1bdb1vdf9ANv4ebLVOiKml5e6mqbPpfYdNACRbtffRpr0MyWj0KcpCu+yhC9oAo/nIEBW0VJpyYRRDAVw1NpltCxHlLeBFgHL88eFXy5BLHyP0b6/fv1MgvELVRNiTnzVCCWJ6l0qlr7D38ZbRvKNisBrhqtRnSbNLPVKBvj15WrB+29IDF61yqhkMo46Kmxr7wg8xKeROR/VN8zGlQN6CRh9vybUvOiyMTwYn8+EIb0oeZX+btn3Zry5+n9396crxQ7zhq0JLVHOR1VxYRenKb5iTmg8lYJSTWiTFnOyUk51sdcdQNXh+fqkvuXiv0clW3zMppZMd5yKoJ5+PJ9+q3Nuk/kIbx45kDjvdE1BOpr/hH6EVg5cvWZ4qFHE65cLnS33JEj+nc0HmLwRZzOcv6HLxav41W1QMq8BnLFWB8yl9CgpyNn9BudDqZtS9oiaF1C+Jy4FNBn3gK3qzslN1pNGS4mwmg2eGyxy8ATYXizk//HdssRCLb5+DR+WNDQLRNpMBJaY3RXzs1Qhraut3R9gm9W2V9x6Na2ofuy1+GTAOzF315C7jRo2OdbonkwHO6WiBpUtKDyTFn4I3d4oimwzmIAg6n+URwmlTz6zfNTfCTJWT/sAPhtE1FfbxkZ7++7N8jjl01VlzmciT3FelLqhO+hWonIyPj896Lup/sw3hL9A942K036eI7mSMMD5li7NajY6iu8w4F4szXuyiU8anTvYrw+iGipvJEA8kQwCDYAX5YQe9voUlmQwsnudZXM75l+SSk4LXfXMJ90j+6Eo7LcnN1DPk/CDw1LPDBtA4thV4PrSALtkl/fjh6pqKMlqWv119uJR57Eu/eWCDW6JISzjww/Iz/JeLa3rgEh3EUfjyU06R8WdPW96URpeHUDVPhP8v23RaslwdJ1GKIWmrsJ4d59S/M0l/DngGAAA="); // placeholder for compressed endpoint.html
 let intv = hourMode ? 3_600_000 : 900_000;
 
 function next() {
@@ -76,52 +76,68 @@ function set(val) {
 }
 
 function getP() {
-  let now = new Date();
+  let now = new Date();                                                           // H�mta dagens datum
   let strt = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
   let year = strt.getFullYear().toString();
   let month = (strt.getMonth() + 1).toString();
+  //  let month = (strt.getMonth() + 1).toString().padStart(2, "0");  // ChatGTP
   let day = strt.getDate().toString();
+  //  let day = strt.getDate().toString().padStart(2, "0");           // ChatGTP
   let parm = [
     year,
-    "-",
+    //  "-",
+     "/",                                                                     // My url change 1.
     month.length === 1 ? "0" + month : month,
     "-",
     day.length === 1 ? "0" + day : day,
-  ].join("");
+    ].join("");
+  //  let parm = `${year}/${month}-${day}`;           // ChatGTP
+    console.log(parm);
+    //let url = "https://api.energy-charts.info/price?bzn=" + epexBZN + "&start=" + parm;                      // url f�r pris p� tysk-�sterikisk marknad
+  let url = "https://se.elpris.eu/api/v1/prices/" + parm + "_SE3.json";                                // url change 2. url  f�r spotpris. L�gg till ?avg24 f�r timpris, men d� blir det nog fel nedan.
+  //  let url = `https://se.elpris.eu/api/v1/prices/${parm}_SE3.json`;   // ChatGTP
+   // console.log("getP");
+  //  const response = await fetch(url);             // ChatGTP
+  //  const data = await response.json();            // ChatGTP
+  //  console.log(data);                             // ChatGTP
+    Shelly.call("http.get", { url: url }, prcP, strt.getTime());
 
-  let url = "https://api.energy-charts.info/price?bzn=" + epexBZN + "&start=" + parm;
-
-  Shelly.call("http.get", { url: url }, prcP, strt.getTime());
 }
+getP();                            // ChatGTP - No difference
 
 function prcP(res, errc, errm, strt) {
+    console.log("Inne i prcP");
   let fbm = false;
   let dsix = prc.length;
   let mult = hourMode ? 1 : 4;
-  let dt = strt;
+  let dt = strt;                                           // Varf�r skapas dt som en kopia av aktuellt datum? Jo, f�r att g� fr�n 15 minuters pris till timpris om hourMode=true!
 
   let err = "";
   if (errc !== 0) {
-    err = "Shelly error: " + errc + "/" + errm;
+      err = "Shelly error: " + errc + "/" + errm;
+      console.log("1");
   } else if (res.code !== 200) {
-    err = "Server error " + res.code + "/" + res.message;
+      err = "Server error " + res.code + "/" + res.message;
+      console.log("2");
   } else {
-    delete res.headers; // free up RAM to reduce peak memory usage
-    let pstr = res.body.indexOf('"price":') + 8;
-    let pend = res.body.indexOf("]", pstr) + 1;
-    res.body = res.body.substring(pstr, pend);
-    let prcs = JSON.parse(res.body);
-    delete res.body;
-    if (hourMode) {
+     delete res.headers; // free up RAM to reduce peak memory usage
+      // let pstr = res.body.indexOf('"price":') + 8;
+    // let pend = res.body.indexOf("]", pstr) + 1;           // last position
+    //res.body = res.body.substring(pstr, pend);            // prisstr�ng
+     // let prcs = JSON.parse(res.body);                      // priser
+     let prcs = JSON.parse(res.body).p;                    // From Towiat 2026-02-27
+     console.log("3");
+     delete res.body;
+    if (hourMode) {                                            
       for (let i = 0; i < prcs.length; i += 4) {
         let psum = 0;
-        for (let j = i; j < i + 4; j++) psum += prcs[j] / 10;
+        for (let j = i; j < i + 4; j++) psum += prcs[j];
         prc.push(priceModifier(new Date(dt), parseFloat((psum / 4).toFixed(3))));
         dt += intv;
       }
     } else {
-      for (let p of prcs) {
-        prc.push(priceModifier(new Date(dt), p / 10));
+      for (let p of prcs) {                                       // Vad g�rs h�r?
+        prc.push(priceModifier(new Date(dt), p));
         dt += intv;
       }
     }
@@ -202,7 +218,7 @@ function chck() {
   if (time.getHours() === 15 && time.getMinutes() === 0) timH = Timer.set(rOff, false, getP);
 }
 
-function spEP(req, res) {
+function spEP(req, res) {                                                          // Spotpris-rutin
   res.headers = [
     ["Content-Type", "text/html"],
     ["Content-Encoding", "gzip"],
@@ -211,7 +227,7 @@ function spEP(req, res) {
   res.send();
 }
 
-function dtEP(req, res) {
+function dtEP(req, res) {                                                           // Backup data-rutin, om ej giltig prisdata hittas
   if (req.method === "POST") {
     let data = JSON.parse(req.body);
     let idx = (data.h - anch) / intv;
@@ -230,11 +246,12 @@ function init() {
     return;
   }
 
-  if (new Date().getHours() >= 15) timH = Timer.set(0, false, getP);
+  //if (new Date().getHours() >= 15) timH = Timer.set(0, false, getP);                  // H�mta nya priser efter kl. 15
+    timH = Timer.set(0, false, getP);               // Test
 
   HTTPServer.registerEndpoint("spotelly", spEP);
   HTTPServer.registerEndpoint("data", dtEP);
-
+    console.log("Init");
   Shelly.call("Schedule.List", {}, function (res) {
     let call = { method: "Script.Eval", params: { id: Script.id, code: "chck()" } };
     let schd = {

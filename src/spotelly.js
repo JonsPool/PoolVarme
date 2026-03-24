@@ -13,12 +13,12 @@ let blockMode = false; // set calculation mode. True for a consequative duration
 let switchOnDuration = 4; // hours if hourMode is true, else quarter hours
 let timeWindowStartHour = 7; // minimum 0, maximum 23
 let timeWindowEndHour = 19; // minimum 0, maximum 23
-let priceLimit = Infinity; // in cent/kWh
+let priceLimit = Infinity; // in SEK/kWh
 let useFallback = true; // if true, use fallback when price retrieval fails
 
 // change this function to display prices according to the conditions of your contract
 function priceModifier(datetime, spotPrice) {
-  return spotPrice; // spotPrice is in cent/kWh
+  return spotPrice; // spotPrice is in SEK/kWh
 }
 
 let switchID = 0; // set the switch ID for multi-switch devices
@@ -76,55 +76,69 @@ function set(val) {
 }
 
 function getP() {
-  let now = new Date();
+  let now = new Date();                                                           // Hämta dagens datum
   let strt = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
   let year = strt.getFullYear().toString();
   let month = (strt.getMonth() + 1).toString();
+  //  let month = (strt.getMonth() + 1).toString().padStart(2, "0");  // ChatGTP
   let day = strt.getDate().toString();
+  //  let day = strt.getDate().toString().padStart(2, "0");           // ChatGTP
+    this is bad code
   let parm = [
     year,
-      "-",
-    // "/",
+    //  "-",
+     "/",                                                                     // My url change 1.
     month.length === 1 ? "0" + month : month,
     "-",
     day.length === 1 ? "0" + day : day,
-  ].join("");
+    ].join("");
+  //  let parm = `${year}/${month}-${day}`;           // ChatGTP
+    console.log(parm);
+    //let url = "https://api.energy-charts.info/price?bzn=" + epexBZN + "&start=" + parm;                      // url för pris på tysk-österikisk marknad
+  let url = "https://se.elpris.eu/api/v1/prices/" + parm + "_SE3.json";                                // url change 2. url  för spotpris. Lägg till ?avg24 för timpris, men då blir det nog fel nedan.
+  //  let url = `https://se.elpris.eu/api/v1/prices/${parm}_SE3.json`;   // ChatGTP
+   // console.log("getP");
+  //  const response = await fetch(url);             // ChatGTP
+  //  const data = await response.json();            // ChatGTP
+  //  console.log(data);                             // ChatGTP
+    Shelly.call("http.get", { url: url }, prcP, strt.getTime());
 
-    let url = "https://api.energy-charts.info/price?bzn=" + epexBZN + "&start=" + parm;
-    //let url = "https://se.elpris.eu/api/v1/prices/" + parm + "_SE3.json?avg24";
-
-  Shelly.call("http.get", { url: url }, prcP, strt.getTime());
 }
+getP();                            // ChatGTP - No difference
 
 function prcP(res, errc, errm, strt) {
+    console.log("Inne i prcP");
   let fbm = false;
   let dsix = prc.length;
   let mult = hourMode ? 1 : 4;
-  let dt = strt;
+  let dt = strt;                                           // Varför skapas dt som en kopia av aktuellt datum? Jo, för att gå från 15 minuters pris till timpris om hourMode=true!
 
   let err = "";
   if (errc !== 0) {
-    err = "Shelly error: " + errc + "/" + errm;
+      err = "Shelly error: " + errc + "/" + errm;
+      console.log("1");
   } else if (res.code !== 200) {
-    err = "Server error " + res.code + "/" + res.message;
+      err = "Server error " + res.code + "/" + res.message;
+      console.log("2");
   } else {
-    delete res.headers; // free up RAM to reduce peak memory usage
-      let pstr = res.body.indexOf('"price":') + 8;
-      // let pstr = res.body.indexOf('96,"p":') + 7;
-    let pend = res.body.indexOf("]", pstr) + 1;           // last position
-    res.body = res.body.substring(pstr, pend);
-    let prcs = JSON.parse(res.body);
-    delete res.body;
-    if (hourMode) {
+     delete res.headers; // free up RAM to reduce peak memory usage
+      // let pstr = res.body.indexOf('"price":') + 8;
+    // let pend = res.body.indexOf("]", pstr) + 1;           // last position
+    //res.body = res.body.substring(pstr, pend);            // prissträng
+     // let prcs = JSON.parse(res.body);                      // priser
+     let prcs = JSON.parse(res.body).p;                    // From Towiat 2026-02-27, ersätter ovanstående
+     console.log("3");
+     delete res.body;
+    if (hourMode) {                                            
       for (let i = 0; i < prcs.length; i += 4) {
         let psum = 0;
-        for (let j = i; j < i + 4; j++) psum += prcs[j] / 10;
+        for (let j = i; j < i + 4; j++) psum += prcs[j];
         prc.push(priceModifier(new Date(dt), parseFloat((psum / 4).toFixed(3))));
         dt += intv;
       }
     } else {
-      for (let p of prcs) {
-        prc.push(priceModifier(new Date(dt), p / 10));
+      for (let p of prcs) {                                       // Vad görs här?
+        prc.push(priceModifier(new Date(dt), p));
         dt += intv;
       }
     }
@@ -205,7 +219,7 @@ function chck() {
   if (time.getHours() === 15 && time.getMinutes() === 0) timH = Timer.set(rOff, false, getP);
 }
 
-function spEP(req, res) {
+function spEP(req, res) {                                                          // Spotpris-rutin
   res.headers = [
     ["Content-Type", "text/html"],
     ["Content-Encoding", "gzip"],
@@ -214,7 +228,7 @@ function spEP(req, res) {
   res.send();
 }
 
-function dtEP(req, res) {
+function dtEP(req, res) {                                                           // Backup data-rutin, om ej giltig prisdata hittas
   if (req.method === "POST") {
     let data = JSON.parse(req.body);
     let idx = (data.h - anch) / intv;
@@ -233,11 +247,12 @@ function init() {
     return;
   }
 
-  if (new Date().getHours() >= 15) timH = Timer.set(0, false, getP);
+  if (new Date().getHours() >= 15) timH = Timer.set(0, false, getP);                  // Hämta nya priser efter kl. 15
+  //  timH = Timer.set(0, false, getP);               // Test. Gjorde ingen skillnad
 
   HTTPServer.registerEndpoint("spotelly", spEP);
   HTTPServer.registerEndpoint("data", dtEP);
-
+    console.log("Init");
   Shelly.call("Schedule.List", {}, function (res) {
     let call = { method: "Script.Eval", params: { id: Script.id, code: "chck()" } };
     let schd = {
